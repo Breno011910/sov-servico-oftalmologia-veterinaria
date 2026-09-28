@@ -183,9 +183,6 @@ export default function AuthScreen() {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-500 mt-5">
-          Cada conta tem seu próprio prontuário, isolado e seguro.
-        </p>
       </div>
     </div>
   );

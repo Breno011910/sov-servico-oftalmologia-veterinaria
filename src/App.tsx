@@ -20,13 +20,12 @@ function AppContent() {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    // Detect password recovery from the URL hash that Supabase sends in the email link.
+    // We must NOT strip the hash before Supabase processes it — getSession/onAuthStateChange
+    // reads the access_token from the hash to establish the recovery session.
     const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('type=signup')) {
-      if (hash.includes('type=recovery')) setIsPasswordRecovery(true);
-      // Clean the URL so the recovery flag doesn't persist on refresh
-      if (hash.includes('type=recovery')) {
-        history.replaceState(null, '', window.location.pathname);
-      }
+    if (hash.includes('type=recovery')) {
+      setIsPasswordRecovery(true);
     }
   }, []);
 
@@ -46,6 +45,10 @@ function AppContent() {
   }
 
   if (isPasswordRecovery && session) {
+    // Clean the recovery token from the URL now that the session is established
+    if (window.location.hash.includes('type=recovery')) {
+      history.replaceState(null, '', window.location.pathname);
+    }
     return (
       <ResetPassword
         onBack={() => {
