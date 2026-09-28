@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
-import type { Screen, Patient, Consultation } from '@/types';
-import { getPatients, getConsultationsByPatient, formatDate } from '@/storage';
+import { Plus, Search, Trash2 } from 'lucide-react';
+import type { Screen, Patient } from '@/types';
+import { getPatients, getConsultationsByPatient, deletePatient, formatDate } from '@/storage';
 
 interface PatientsProps {
   onNavigate: (screen: Screen) => void;
@@ -12,8 +12,11 @@ export default function Patients({ onNavigate }: PatientsProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [consultationDates, setConsultationDates] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<Patient | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true);
     getPatients().then(async (pats) => {
       setPatients(pats);
       const dates: Record<string, string> = {};
@@ -24,7 +27,9 @@ export default function Patients({ onNavigate }: PatientsProps) {
       setConsultationDates(dates);
       setLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { loadData(); }, []);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return patients;
@@ -36,6 +41,20 @@ export default function Patients({ onNavigate }: PatientsProps) {
         p.breed.toLowerCase().includes(q)
     );
   }, [search, patients]);
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deletePatient(deleteTarget.id);
+      setDeleteTarget(null);
+      loadData();
+    } catch {
+      setDeleteTarget(null);
+    }
+    setDeleting(false);
+  };
 
   if (loading) {
     return <div className="p-8 text-slate-400 text-sm">Carregando...</div>;
@@ -78,12 +97,13 @@ export default function Patients({ onNavigate }: PatientsProps) {
               <th className="px-5 py-3 font-medium">Idade</th>
               <th className="px-5 py-3 font-medium">Proprietário</th>
               <th className="px-5 py-3 font-medium">Última consulta</th>
+              <th className="px-5 py-3 font-medium text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-slate-400">
+                <td colSpan={7} className="px-5 py-8 text-center text-slate-400">
                   Nenhum paciente encontrado.
                 </td>
               </tr>
@@ -100,12 +120,57 @@ export default function Patients({ onNavigate }: PatientsProps) {
                   <td className="px-5 py-3 text-slate-600">{p.age}</td>
                   <td className="px-5 py-3 text-slate-600">{p.owner.name}</td>
                   <td className="px-5 py-3 text-slate-500">{consultationDates[p.id] || '—'}</td>
+                  <td className="px-5 py-3 text-right">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(p); }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Excluir
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">Excluir paciente</h3>
+                <p className="text-sm text-slate-500">Esta ação não pode ser desfeita.</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600 mb-5">
+              Tem certeza que deseja excluir <span className="font-semibold">{deleteTarget.name}</span> e todas as suas consultas e fotos?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? 'Excluindo...' : 'Sim, excluir'}
+              </button>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="flex-1 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
