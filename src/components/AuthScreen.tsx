@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, Mail, Lock, LogIn, UserPlus, User, ArrowLeft, MailCheck } from 'lucide-react';
+import { Eye, Mail, Lock, LogIn, UserPlus, User, ArrowLeft, MailCheck, EyeOff } from 'lucide-react';
 import { useAuth } from '@/auth';
 
 type Mode = 'signin' | 'signup' | 'forgot';
@@ -13,6 +13,7 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -130,14 +131,21 @@ export default function AuthScreen() {
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       minLength={6}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500"
+                      className="w-full pl-9 pr-10 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
               )}
