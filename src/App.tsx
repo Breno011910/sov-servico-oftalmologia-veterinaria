@@ -7,27 +7,52 @@ import PatientRecord from '@/components/PatientRecord';
 import ConsultationForm from '@/components/ConsultationForm';
 import ConsultationView from '@/components/ConsultationView';
 import AuthScreen from '@/components/AuthScreen';
+import ResetPassword from '@/components/ResetPassword';
 import { AuthProvider, useAuth } from '@/auth';
 import { seedDemoData } from '@/storage';
+import { supabase } from '@/supabaseClient';
 import type { Screen } from '@/types';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const [screen, setScreen] = useState<Screen>({ name: 'dashboard' });
   const [seeded, setSeeded] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    if (user && !seeded) {
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') || hash.includes('type=signup')) {
+      if (hash.includes('type=recovery')) setIsPasswordRecovery(true);
+      // Clean the URL so the recovery flag doesn't persist on refresh
+      if (hash.includes('type=recovery')) {
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && !seeded && !isPasswordRecovery) {
       seedDemoData(user.id).then(() => setSeeded(true));
     }
     if (!user) setSeeded(false);
-  }, [user, seeded]);
+  }, [user, seeded, isPasswordRecovery]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <p className="text-slate-400 text-sm">Carregando...</p>
       </div>
+    );
+  }
+
+  if (isPasswordRecovery && session) {
+    return (
+      <ResetPassword
+        onBack={() => {
+          setIsPasswordRecovery(false);
+          supabase.auth.signOut();
+        }}
+      />
     );
   }
 
